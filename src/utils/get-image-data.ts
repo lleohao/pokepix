@@ -1,5 +1,8 @@
 export type Color = { r: number; g: number; b: number };
-export type ColorCount = Map<string, { color: Color; count: number }>;
+export type ColorCount = Map<
+  string,
+  { color: Color; count: number; key: string }
+>;
 
 export function getImageData(
   url: string,
@@ -18,7 +21,7 @@ export function getImageData(
     const colorMatrix: Color[][] = [];
     const colorCount: ColorCount = new Map<
       string,
-      { color: Color; count: number }
+      { color: Color; count: number; key: '' }
     >();
 
     image.onload = () => {
@@ -40,13 +43,16 @@ export function getImageData(
             b: data[i + 2],
             // a: data[i + 3] / 255,
           };
-          const colorStr = `${data[i]}-${data[i + 1]}-${data[i + 2]}`;
+          const colorStr = getColorKey(color);
 
           if (colorCount.has(colorStr)) {
-            colorCount.get(colorStr).count =
-              colorCount.get(colorStr)?.count + 1;
+            colorCount.get(colorStr).count = colorCount.get(colorStr).count + 1;
           } else {
-            colorCount.set(colorStr, { color, count: 1 });
+            colorCount.set(colorStr, {
+              color,
+              count: 1,
+              key: String(colorCount.size + 1),
+            });
           }
 
           line.push(color);
@@ -70,3 +76,7 @@ export function getImageData(
     image.src = url;
   });
 }
+
+export const getColorKey = ({ r, g, b }: Color): string => {
+  return [r, g, b].join('-');
+};
