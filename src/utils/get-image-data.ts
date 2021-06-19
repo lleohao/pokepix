@@ -1,9 +1,10 @@
-export type Color = { r: number; g: number; b: number; a: number };
+export type Color = { r: number; g: number; b: number };
+export type ColorCount = Map<string, { color: Color; count: number }>;
 
 export function getImageData(
   url: string,
   maxWidth: number = 300
-): Promise<Color[][]> {
+): Promise<{ colorMatrix: Color[][]; colorCount: ColorCount }> {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
@@ -14,7 +15,11 @@ export function getImageData(
 
   return new Promise((resolve, reject) => {
     const image = new Image();
-    const colorList: Color[][] = [];
+    const colorMatrix: Color[][] = [];
+    const colorCount: ColorCount = new Map<
+      string,
+      { color: Color; count: number }
+    >();
 
     image.onload = () => {
       const width = Math.min(maxWidth, image.naturalWidth);
@@ -29,18 +34,31 @@ export function getImageData(
         const { data } = context.getImageData(0, i, width, 1);
         const line = [];
         for (let i = 0; i < data.length; i += 4) {
-          line.push({
+          const color: Color = {
             r: data[i],
             g: data[i + 1],
             b: data[i + 2],
-            a: data[i + 3] / 255,
-          });
+            // a: data[i + 3] / 255,
+          };
+          const colorStr = `${data[i]}-${data[i + 1]}-${data[i + 2]}`;
+
+          if (colorCount.has(colorStr)) {
+            colorCount.get(colorStr).count =
+              colorCount.get(colorStr)?.count + 1;
+          } else {
+            colorCount.set(colorStr, { color, count: 1 });
+          }
+
+          line.push(color);
         }
 
-        colorList.push(line);
+        colorMatrix.push(line);
       }
 
-      resolve(colorList);
+      resolve({
+        colorMatrix,
+        colorCount,
+      });
 
       setTimeout(() => {
         document.body.removeChild(canvas);
