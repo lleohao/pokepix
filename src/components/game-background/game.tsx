@@ -1,16 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Color, ColorCount, getColorKey } from '../../utils/get-image-data';
 
-export interface GameBackgroundProps {
+export interface GameProps {
   colorMatrix: Color[][];
   colorCount: ColorCount;
   squareSize?: number;
 }
 
-export default function GameBackground(props: GameBackgroundProps) {
+function drawSquare(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: Color,
+  opacity: number = 0.5
+) {
+  const { r, g, b } = color;
+
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  ctx.fillRect(x, y, size, size);
+}
+
+export default function Game(props: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { colorMatrix, colorCount, squareSize = 40 } = props;
+  const stateRef = useRef<Map<string, boolean>>(new Map<string, boolean>());
 
   const [size, setSize] = useState<{ height: number; width: number }>({
     height: 0,
@@ -29,14 +44,14 @@ export default function GameBackground(props: GameBackgroundProps) {
 
       for (let i = 0; i < m; i++) {
         for (let j = 0; j < n; j++) {
-          const { r, g, b } = colorMatrix[i][j];
-          context.fillStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+          const color = colorMatrix[i][j];
 
-          context.fillRect(
+          drawSquare(
+            context,
             j * squareSize,
             i * squareSize,
             squareSize,
-            squareSize
+            color
           );
 
           context.fillStyle = '#666';
@@ -63,8 +78,8 @@ export default function GameBackground(props: GameBackgroundProps) {
     if (colorMatrix.length === 0 || !colorCount) return;
 
     setSize({
-      height: colorMatrix[0].length * squareSize,
-      width: colorMatrix.length * squareSize,
+      width: colorMatrix[0].length * squareSize,
+      height: colorMatrix.length * squareSize,
     });
 
     setTimeout(() => {
@@ -73,7 +88,45 @@ export default function GameBackground(props: GameBackgroundProps) {
   }, [colorMatrix, squareSize, colorCount]);
 
   return (
-    <div>
+    <div
+      style={{ width: size.width }}
+      onClick={(e) => {
+        const [x, y] = [
+          Math.floor(e.pageX / squareSize),
+          Math.floor(e.pageY / squareSize),
+        ];
+
+        if (canvasRef.current) {
+          const ctx = canvasRef.current.getContext('2d');
+          const key = `${x}-${y}`;
+
+          ctx.clearRect(x * squareSize, y * squareSize, squareSize, squareSize);
+          if (stateRef.current.get(key)) {
+            drawSquare(
+              ctx,
+              x * squareSize,
+              y * squareSize,
+              squareSize,
+              colorMatrix[y][x],
+              0.5
+            );
+
+            stateRef.current.set(key, false);
+          } else {
+            stateRef.current.set(key, true);
+
+            drawSquare(
+              ctx,
+              x * squareSize,
+              y * squareSize,
+              squareSize,
+              colorMatrix[y][x],
+              1
+            );
+          }
+        }
+      }}
+    >
       <canvas {...size} ref={canvasRef} />
     </div>
   );
